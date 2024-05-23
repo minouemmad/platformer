@@ -22,19 +22,36 @@ const player = {
     isJumping: false
 };
 
-const obstacles = [
-    { x: 300, y: canvas.height - 60, width: 40, height: 40 },
-    { x: 500, y: canvas.height - 100, width: 40, height: 40 },
-    { x: 700, y: canvas.height - 150, width: 40, height: 40 },
-    { x: 900, y: canvas.height - 60, width: 40, height: 40 },
-    { x: 1100, y: canvas.height - 100, width: 40, height: 40 }
+const levels = [
+    {
+        backgroundColor: '#87CEEB',
+        obstacles: [
+            { x: 300, y: canvas.height - 60, width: 40, height: 40 },
+            { x: 500, y: canvas.height - 100, width: 40, height: 40 },
+            { x: 700, y: canvas.height - 150, width: 40, height: 40 },
+            { x: 900, y: canvas.height - 60, width: 40, height: 40 },
+            { x: 1100, y: canvas.height - 100, width: 40, height: 40 }
+        ],
+        endBlock: { x: 1300, y: canvas.height - 60, width: 40, height: 40 }
+    },
+    {
+        backgroundColor: '#FFD700',
+        obstacles: [
+            { x: 200, y: canvas.height - 60, width: 40, height: 40 },
+            { x: 400, y: canvas.height - 100, width: 40, height: 40 },
+            { x: 600, y: canvas.height - 150, width: 40, height: 40 },
+            { x: 800, y: canvas.height - 60, width: 40, height: 40 },
+            { x: 1000, y: canvas.height - 100, width: 40, height: 40 },
+            { x: 1200, y: canvas.height - 150, width: 40, height: 40 }
+        ],
+        endBlock: { x: 1400, y: canvas.height - 60, width: 40, height: 40 }
+    }
 ];
 
-// End block
-const endBlock = { x: 1300, y: canvas.height - 60, width: 40, height: 40 };
-
+let currentLevel = 0;
 let keys = {};
 let gameOver = false;
+let gameWon = false;
 
 document.addEventListener('keydown', (e) => {
     keys[e.code] = true;
@@ -59,11 +76,27 @@ function resetGame() {
     player.dy = 0;
     player.isJumping = false;
     gameOver = false;
-    window.location.href = '/';
+    gameWon = false;
+    document.getElementById('retryOverlay').style.display = 'none';
+    document.getElementById('nextLevelOverlay').style.display = 'none';
+    resizeCanvas();
+    update();
+}
+
+function retryGame() {
+    resetGame();
+}
+
+function nextLevel() {
+    currentLevel++;
+    if (currentLevel >= levels.length) {
+        currentLevel = 0;
+    }
+    resetGame();
 }
 
 function update() {
-    if (gameOver) return;
+    if (gameOver || gameWon) return;
 
     // Move player left and right
     if (keys['ArrowLeft']) {
@@ -84,6 +117,10 @@ function update() {
         player.isJumping = false;
     }
 
+    const level = levels[currentLevel];
+    const obstacles = level.obstacles;
+    const endBlock = level.endBlock;
+
     // Collision detection with obstacles
     obstacles.forEach(obstacle => {
         if (player.x < obstacle.x + obstacle.width &&
@@ -92,7 +129,7 @@ function update() {
             player.y + player.height > obstacle.y) {
             // Player dies
             gameOver = true;
-            setTimeout(resetGame, 1000);
+            document.getElementById('retryOverlay').style.display = 'block';
         }
     });
 
@@ -102,14 +139,21 @@ function update() {
         player.y < endBlock.y + endBlock.height &&
         player.y + player.height > endBlock.y) {
         // Reached the end block
-        setTimeout(resetGame, 500);
+        gameWon = true;
+        document.getElementById('nextLevelOverlay').style.display = 'block';
     }
 
     draw();
 }
 
 function draw() {
+    const level = levels[currentLevel];
+
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Draw background
+    ctx.fillStyle = level.backgroundColor;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
 
     // Draw player
     ctx.fillStyle = 'red';
@@ -117,13 +161,13 @@ function draw() {
 
     // Draw obstacles
     ctx.fillStyle = 'blue';
-    obstacles.forEach(obstacle => {
+    level.obstacles.forEach(obstacle => {
         ctx.fillRect(obstacle.x, obstacle.y, obstacle.width, obstacle.height);
     });
 
     // Draw end block
     ctx.fillStyle = 'green';
-    ctx.fillRect(endBlock.x, endBlock.y, endBlock.width, endBlock.height);
+    ctx.fillRect(level.endBlock.x, level.endBlock.y, level.endBlock.width, level.endBlock.height);
 
     requestAnimationFrame(update);
 }

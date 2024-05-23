@@ -8,6 +8,14 @@
 </head>
 <body>
     <canvas id="gameCanvas"></canvas>
+    <div class="overlay" id="retryOverlay">
+        <h2>Game Over</h2>
+        <button onclick="retryGame()">Retry</button>
+    </div>
+    <div class="overlay" id="nextLevelOverlay">
+        <h2>Congratulations!</h2>
+        <button onclick="nextLevel()">Next Level</button>
+    </div>
     <script src="game.js"></script>
 </body>
 </html>
