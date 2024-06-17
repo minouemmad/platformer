@@ -3,23 +3,45 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Platformer Game</title>
-    <link rel="stylesheet" href="style.css">
+    <link rel="icon" href="5931dd33fd082c85db78e9ee017076a6-3d-building-blocks.webp" type="image/webp">
+    <title>Simple Game</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: #1E1E1E;
+        }
+
+        canvas {
+            display: block;
+        }
+
+        #popup {
+            display: none;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: #FFF;
+            padding: 20px;
+            box-shadow: 0px 0px 15px rgba(0,0,0,0.3);
+            z-index: 1000;
+            text-align: center;
+        }
+
+        #popup button {
+            margin: 10px;
+            padding: 10px 20px;
+            font-size: 16px;
+        }
+    </style>
 </head>
 <body>
-    <canvas id="gameCanvas"></canvas>
-    <div class="overlay" id="retryOverlay">
-        <h2>Game Over</h2>
-        <button onclick="retryGame()">Retry</button>
-    </div>
-    <div class="overlay" id="nextLevelOverlay">
-        <h2>Congratulations!</h2>
+    <canvas id="canvas"></canvas>
+    <div id="popup">
         <p id="completionTime"></p>
-        <button onclick="nextLevel()">Next Level</button>
-    </div>
-    <div class="overlay" id="levelOverlay">
-        <h2 id="levelText">Level 1</h2>
-        <button onclick="startLevel()">Start</button>
+        <button id="nextLevel">Next Level</button>
+        <button id="menu">Menu</button>
     </div>
     <script src="game.js"></script>
 </body>
