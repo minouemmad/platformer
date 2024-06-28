@@ -20,6 +20,14 @@ var canvas = document.getElementById("canvas"),
         color: '#E6AC27',
         invincible: false
     },
+    aiPlayer = {
+        x: width - 50, // Starting on the far right
+        y: height - 35,
+        width: 25,
+        height: 25,
+        speed: 2.5, // Slightly slower than the main player
+        color: '#FF5733'
+    },
     keys = [],
     friction = 0.8,
     gravity = 0.4,
@@ -48,6 +56,10 @@ function initializeGame() {
     player.color = '#E6AC27';
     gravity = 0.4;
     friction = 0.8;
+
+    // Initialize AI player properties
+    aiPlayer.x = width - 50;
+    aiPlayer.y = height - 35;
 
     // Static platforms
     boxes = [
@@ -148,31 +160,32 @@ function update() {
     }
 
     // Draw and update moving platforms
-    for (var j = 0; j < movingPlatforms.length; j++) {
-        ctx.fillStyle = movingPlatforms[j].color;
-        ctx.fillRect(movingPlatforms[j].x, movingPlatforms[j].y, movingPlatforms[j].width, movingPlatforms[j].height);
+    for (var i = 0; i < movingPlatforms.length; i++) {
+        var platform = movingPlatforms[i];
+        ctx.fillStyle = platform.color;
+        ctx.fillRect(platform.x, platform.y, platform.width, platform.height);
 
-        // Update position of moving platform
-        if (movingPlatforms[j].moveX) {
-            movingPlatforms[j].x += movingPlatforms[j].speed * movingPlatforms[j].dir;
-            if (movingPlatforms[j].x > movingPlatforms[j].range || movingPlatforms[j].x < -movingPlatforms[j].range) {
-                movingPlatforms[j].dir *= -1;
+        if (platform.moveX) {
+            platform.x += platform.speed * platform.dir;
+            if (platform.x > platform.range || platform.x < 0) {
+                platform.dir *= -1;
             }
         }
-        if (movingPlatforms[j].moveY) {
-            movingPlatforms[j].y += movingPlatforms[j].speed * movingPlatforms[j].dir;
-            if (movingPlatforms[j].y > movingPlatforms[j].range || movingPlatforms[j].y < -movingPlatforms[j].range) {
-                movingPlatforms[j].dir *= -1;
+        if (platform.moveY) {
+            platform.y += platform.speed * platform.dir;
+            if (platform.y > platform.range || platform.y < 0) {
+                platform.dir *= -1;
             }
         }
 
-        var dir = colCheck(player, movingPlatforms[j]);
+        var dir = colCheck(player, platform);
         if (dir === "l" || dir === "r") {
             player.velX = 0;
             player.jumping = false;
         } else if (dir === "b") {
             player.grounded = true;
             player.jumping = false;
+            player.y = platform.y - player.height; // Align player on top of platform
         } else if (dir === "t") {
             player.velY *= -1;
         }
@@ -185,65 +198,24 @@ function update() {
     player.x += player.velX;
     player.y += player.velY;
 
-    ctx.fill(); // Draw character
     ctx.fillStyle = player.color;
     ctx.fillRect(player.x, player.y, player.width, player.height);
 
-    // Draw power-ups
-    for (var k = 0; k < powerups.length; k++) {
-        ctx.save();
-        var cx = powerups[k].x + 0.5 * powerups[k].width,
-            cy = powerups[k].y + 0.5 * powerups[k].height;
-        ctx.translate(cx, cy);
-        ctx.rotate((Math.PI / 180) * 45);
-        if (powerups[k].effect === 'tele') {
-            ctx.rotate((Math.PI / 180) * powerups[k].rotate);
-            powerups[k].rotate = (Math.PI / 180) * powerups[k].rotate;
-        }
-        ctx.translate(-cx, -cy);
-        ctx.fillStyle = powerups[k].color;
-        ctx.fillRect(powerups[k].x, powerups[k].y, powerups[k].width, powerups[k].height);
-        ctx.restore();
-
-        // Power-up collision
-        if (colCheck(player, powerups[k]) !== null) {
-            if (powerups[k].effect === 'gravity') {
-                gravity = 0.2; // decrease gravity
-                player.speed = 4;
-                player.color = 'white';
-            } else if (powerups[k].effect === 'shrink') {
-                player.width = 10;
-                player.height = 10;
-                player.speed = 5;
-            } else if (powerups[k].effect === 'tele') {
-                player.x = powerups[k].px;
-                player.y = powerups[k].py;
-            } else if (powerups[k].effect === 'win') {
-                showMenu("You Win! Play Again?");
-            } else if (powerups[k].effect === 'speed') {
-                player.speed = 6;
-                player.color = 'blue';
-            } else if (powerups[k].effect === 'invincibility') {
-                player.invincible = true;
-                player.color = 'gold';
-                setTimeout(function () {
-                    player.invincible = false;
-                    player.color = '#E6AC27';
-                }, 5000); // Invincibility lasts for 5 seconds
-            }
-            if (!powerups[k].stay) powerups[k].width = 0; // Make power-up disappear
-        }
+    // Update AI player position to follow the main player
+    if (aiPlayer.x < player.x) {
+        aiPlayer.x += aiPlayer.speed;
+    } else if (aiPlayer.x > player.x) {
+        aiPlayer.x -= aiPlayer.speed;
     }
 
-    // Draw obstacles
-    for (var l = 0; l < obstacles.length; l++) {
-        ctx.fillStyle = obstacles[l].color;
-        ctx.fillRect(obstacles[l].x, obstacles[l].y, obstacles[l].width, obstacles[l].height);
-        if (colCheck(player, obstacles[l]) !== null && !player.invincible) {
-            showMenu("Game Over");
-            return;
-        }
+    if (aiPlayer.y < player.y) {
+        aiPlayer.y += aiPlayer.speed;
+    } else if (aiPlayer.y > player.y) {
+        aiPlayer.y -= aiPlayer.speed;
     }
+
+    ctx.fillStyle = aiPlayer.color;
+    ctx.fillRect(aiPlayer.x, aiPlayer.y, aiPlayer.width, aiPlayer.height);
 
     requestAnimationFrame(update);
 }
@@ -279,15 +251,6 @@ function colCheck(shapeA, shapeB) {
     return colDir;
 }
 
-function showMenu(message) {
-    menuTitle.textContent = message;
-    menu.style.display = "block";
-}
-
-function hideMenu() {
-    menu.style.display = "none";
-}
-
 document.body.addEventListener("keydown", function (e) {
     keys[e.keyCode] = true;
 });
@@ -302,12 +265,5 @@ window.addEventListener("resize", function () {
     initializeGame();
 });
 
-window.addEventListener("load", function () {
-    initializeGame();
-    update();
-});
-
-restartButton.addEventListener("click", function () {
-    hideMenu();
-    initializeGame();
-});
+initializeGame();
+update();

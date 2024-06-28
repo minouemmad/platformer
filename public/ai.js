@@ -1,119 +1,186 @@
-class QLearningAgent {
-    constructor(numStates, numActions, alpha = 0.1, gamma = 0.9, epsilon = 0.1) {
-        this.numStates = numStates;
-        this.numActions = numActions;
-        this.alpha = alpha; // Learning rate
-        this.gamma = gamma; // Discount factor
-        this.epsilon = epsilon; // Exploration rate
-        this.qTable = this.initializeQTable();
+// ai.js
+var aiPlayer = {
+    x: width / 4,
+    y: height - 35,
+    width: 25,
+    height: 25,
+    speed: 1.5,
+    color: 'red'
+};
+
+function updateAI() {
+    // Move AI towards the player
+    if (aiPlayer.x < player.x) {
+        aiPlayer.x += aiPlayer.speed;
+    } else {
+        aiPlayer.x -= aiPlayer.speed;
     }
 
-    initializeQTable() {
-        let table = [];
-        for (let i = 0; i < this.numStates; i++) {
-            table[i] = Array(this.numActions).fill(0);
-        }
-        return table;
+    if (aiPlayer.y < player.y) {
+        aiPlayer.y += aiPlayer.speed;
+    } else {
+        aiPlayer.y -= aiPlayer.speed;
     }
 
-    chooseAction(state) {
-        if (Math.random() < this.epsilon) {
-            return Math.floor(Math.random() * this.numActions); // Explore
-        } else {
-            return this.qTable[state].indexOf(Math.max(...this.qTable[state])); // Exploit
-        }
-    }
-
-    updateQValue(state, action, reward, nextState) {
-        const bestNextAction = this.qTable[nextState].indexOf(Math.max(...this.qTable[nextState]));
-        const target = reward + this.gamma * this.qTable[nextState][bestNextAction];
-        this.qTable[state][action] = this.qTable[state][action] + this.alpha * (target - this.qTable[state][action]);
+    // AI collision detection with player
+    if (colCheck(aiPlayer, player) !== null && !player.invincible) {
+        showMenu("Game Over");
     }
 }
 
-class AIPlayer {
-    constructor(agent, x, y, width, height, speed, color) {
-        this.agent = agent;
-        this.x = x;
-        this.y = y;
-        this.width = width;
-        this.height = height;
-        this.speed = speed;
-        this.color = color;
-        this.velX = 0;
-        this.velY = 0;
-        this.jumping = false;
-        this.grounded = false;
+function update() {
+    // Handle player input and movements
+    if (keys[38] || keys[32] || keys[87]) { // up arrow, space, or W
+        if (!player.jumping && player.grounded) {
+            player.jumping = true;
+            player.grounded = false;
+            player.velY = -player.speed * 3.5; // how high to jump
+        }
     }
-
-    update(player, boxes) {
-        const state = this.getState(player);
-        const action = this.agent.chooseAction(state);
-        this.performAction(action);
-        this.applyPhysics();
-        this.handleCollisions(boxes);
-        this.updateQValue(player, state, action);
+    if (keys[39] || keys[68]) { // right arrow or D
+        if (player.velX < player.speed) {
+            player.velX++;
+        }
     }
-
-    getState(player) {
-        const dx = Math.sign(player.x - this.x);
-        const dy = Math.sign(player.y - this.y);
-        return dx + 1 + (dy + 1) * 3; // Simple state based on relative position
-    }
-
-    performAction(action) {
-        switch (action) {
-            case 0: // Move left
-                if (this.velX > -this.speed) {
-                    this.velX--;
-                }
-                break;
-            case 1: // Move right
-                if (this.velX < this.speed) {
-                    this.velX++;
-                }
-                break;
-            case 2: // Jump
-                if (!this.jumping && this.grounded) {
-                    this.jumping = true;
-                    this.grounded = false;
-                    this.velY = -this.speed * 2.5; // Adjust jump height if needed
-                }
-                break;
+    if (keys[37] || keys[65]) { // left arrow or A
+        if (player.velX > -player.speed) {
+            player.velX--;
         }
     }
 
-    applyPhysics() {
-        this.velX *= 0.8; // Friction
-        this.velY += 0.4; // Gravity
-        this.x += this.velX;
-        this.y += this.velY;
+    player.velX *= friction;
+    player.velY += gravity;
+
+    ctx.clearRect(0, 0, width, height);
+    ctx.beginPath();
+
+    player.grounded = false;
+    
+    // Draw static platforms
+    for (var i = 0; i < boxes.length; i++) {
+        ctx.fillStyle = boxes[i].color;
+        ctx.fillRect(boxes[i].x, boxes[i].y, boxes[i].width, boxes[i].height);
+
+        var dir = colCheck(player, boxes[i]);
+        if (dir === "l" || dir === "r") {
+            player.velX = 0;
+            player.jumping = false;
+        } else if (dir === "b") {
+            player.grounded = true;
+            player.jumping = false;
+        } else if (dir === "t") {
+            player.velY *= -1;
+        }
     }
 
-    handleCollisions(boxes) {
-        this.grounded = false;
-        for (let box of boxes) {
-            let dir = colCheck(this, box);
-            if (dir === "l" || dir === "r") {
-                this.velX = 0;
-                this.jumping = false;
-            } else if (dir === "b") {
-                this.grounded = true;
-                this.jumping = false;
-            } else if (dir === "t") {
-                this.velY *= -1;
+    // Draw and update moving platforms
+    for (var j = 0; j < movingPlatforms.length; j++) {
+        ctx.fillStyle = movingPlatforms[j].color;
+        ctx.fillRect(movingPlatforms[j].x, movingPlatforms[j].y, movingPlatforms[j].width, movingPlatforms[j].height);
+
+        // Update position of moving platform
+        if (movingPlatforms[j].moveX) {
+            movingPlatforms[j].x += movingPlatforms[j].speed * movingPlatforms[j].dir;
+            if (movingPlatforms[j].x > movingPlatforms[j].range || movingPlatforms[j].x < -movingPlatforms[j].range) {
+                movingPlatforms[j].dir *= -1;
             }
         }
-        if (this.grounded) {
-            this.velY = 0;
+        if (movingPlatforms[j].moveY) {
+            movingPlatforms[j].y += movingPlatforms[j].speed * movingPlatforms[j].dir;
+            if (movingPlatforms[j].y > movingPlatforms[j].range || movingPlatforms[j].y < -movingPlatforms[j].range) {
+                movingPlatforms[j].dir *= -1;
+            }
+        }
+
+        var dir = colCheck(player, movingPlatforms[j]);
+        if (dir === "l" || dir === "r") {
+            player.velX = 0;
+            player.jumping = false;
+        } else if (dir === "b") {
+            player.grounded = true;
+            player.jumping = false;
+        } else if (dir === "t") {
+            player.velY *= -1;
         }
     }
 
-    updateQValue(player, state, action) {
-        const nextState = this.getState(player);
-        const reward = -Math.sqrt((this.x - player.x) ** 2 + (this.y - player.y) ** 2); // Negative distance as reward
-        this.agent.updateQValue(state, action, reward, nextState);
+    if (player.grounded) {
+        player.velY = 0;
     }
+
+    player.x += player.velX;
+    player.y += player.velY;
+
+    ctx.fill(); // Draw player character
+    ctx.fillStyle = player.color;
+    ctx.fillRect(player.x, player.y, player.width, player.height);
+
+    // Draw AI player
+    ctx.fillStyle = aiPlayer.color;
+    ctx.fillRect(aiPlayer.x, aiPlayer.y, aiPlayer.width, aiPlayer.height);
+
+    // Update AI
+    updateAI();
+
+    // Draw power-ups
+    for (var k = 0; k < powerups.length; k++) {
+        ctx.save();
+        var cx = powerups[k].x + 0.5 * powerups[k].width,
+            cy = powerups[k].y + 0.5 * powerups[k].height;
+        ctx.translate(cx, cy);
+        ctx.rotate((Math.PI / 180) * 45);
+        if (powerups[k].effect === 'tele') {
+            ctx.rotate((Math.PI / 180) * powerups[k].rotate);
+            powerups[k].rotate = (Math.PI / 180) * powerups[k].rotate;
+        }
+        ctx.translate(-cx, -cy);
+        ctx.fillStyle = powerups[k].color;
+        ctx.fillRect(powerups[k].x, powerups[k].y, powerups[k].width, powerups[k].height);
+        ctx.restore();
+
+        // Power-up collision
+        if (colCheck(player, powerups[k]) !== null) {
+            if (powerups[k].effect === 'gravity') {
+                gravity = 0.2; // decrease gravity
+                player.speed = 4;
+                player.color = 'white';
+            } else if (powerups[k].effect === 'shrink') {
+                player.width = 10;
+                player.height = 10;
+                player.speed = 5;
+            } else if (powerups[k].effect === 'tele') {
+                player.x = powerups[k].px;
+                player.y = powerups[k].py;
+            } else if (powerups[k].effect === 'win') {
+                showMenu("You Win! Play Again?");
+            } else if (powerups[k].effect === 'speed') {
+                player.speed = 6;
+                player.color = 'blue';
+            } else if (powerups[k].effect === 'invincibility') {
+                player.invincible = true;
+                player.color = 'gold';
+                setTimeout(function () {
+                    player.invincible = false;
+                    player.color = '#E6AC27';
+                }, 5000); // Invincibility lasts for 5 seconds
+            }
+            if (!powerups[k].stay) powerups[k].width = 0; // Make power-up disappear
+        }
+    }
+
+    // Draw obstacles
+    for (var l = 0; l < obstacles.length; l++) {
+        ctx.fillStyle = obstacles[l].color;
+        ctx.fillRect(obstacles[l].x, obstacles[l].y, obstacles[l].width, obstacles[l].height);
+        if (colCheck(player, obstacles[l]) !== null && !player.invincible) {
+            showMenu("Game Over");
+            return;
+        }
+    }
+
+    requestAnimationFrame(update);
 }
 
-export { QLearningAgent, AIPlayer };
+// Call initializeGame() and update() in your main script file to start the game
+initializeGame();
+update();
